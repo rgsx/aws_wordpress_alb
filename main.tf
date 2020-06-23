@@ -149,10 +149,9 @@ resource "aws_security_group" "sg_inst_gr" {
     security_groups = [aws_security_group.sg_inst.id]
   }
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
     security_groups = [aws_security_group.sg_alb.id]
   }
   egress {
@@ -203,32 +202,37 @@ resource "aws_efs_mount_target" "efs-mount_prb" {
   subnet_id       = aws_subnet.subnet_private_b.id
   security_groups = [aws_security_group.sg_efs.id]
 }
-/* resource "aws_efs_mount_target" "efs-mount_puba" {
-  file_system_id  = aws_efs_file_system.efs-wordpress.id
-  subnet_id       = aws_subnet.subnet_public_a.id
-  security_groups = [aws_security_group.sg_efs.id]
-}
-resource "aws_efs_mount_target" "efs-mount_pubb" {
-  file_system_id  = aws_efs_file_system.efs-wordpress.id
-  subnet_id       = aws_subnet.subnet_public_b.id
-  security_groups = [aws_security_group.sg_efs.id]
-} */
 resource "aws_instance" "instance_wordpress" {
-  ami                    = var.instance_ami_gr
+  ami                    = var.instance_ami_one
   instance_type          = var.instance_type
   key_name               = var.aws_key_name
   subnet_id              = aws_subnet.subnet_public_a.id
   vpc_security_group_ids = [aws_security_group.sg_inst.id]
 
   provisioner "remote-exec" {
-    inline = [<<EOT
-      sudo apt-get -y -qq update &&  sudo apt-get -y -qq install nfs-common > /dev/null 
-      sudo mkdir /efs-wordpress
-      sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${aws_efs_file_system.efs-wordpress.dns_name}:/ /efs-wordpress
-      sudo touch /efs-wordpress/a   
-      EOT
-    ]
+    inline = [
+      "sudo apt-get -y  update && sudo apt-get -y  install nfs-common",
+      "sudo mkdir /efs",
+      "sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${aws_efs_file_system.efs-wordpress.dns_name}:/ /efs",
+      "if [ ! -d /efs/wp-admin ] ; then wget https://wordpress.org/latest.tar.gz; sudo tar -zxvf latest.tar.gz --strip-components 1  -C /efs; sudo chown -R www-data:www-data /efs; sudo chmod a+rw /efs; rm latest.tar.gz; fi",
+       ]
     connection {
+      type        = "ssh"
+      user        = "ubuntu"
+      private_key = file("rgsx_key.pem")
+      host        = self.public_ip
+    }
+  }
+  provisioner "file" {
+    content =  templatefile("wp-config.php.tpl", {
+      db_name = var.dbname,
+      db_user = var.dbuser,
+      db_password = var.dbpassword
+      db_host = aws_db_instance.db_wordpress.address
+     }
+    )
+    destination = "/efs/wp-config.php"
+      connection {
       type        = "ssh"
       user        = "ubuntu"
       private_key = file("rgsx_key.pem")
@@ -239,6 +243,7 @@ resource "aws_instance" "instance_wordpress" {
     aws_efs_mount_target.efs-mount_pra,
   ]
 }
+
 resource "aws_db_subnet_group" "db_subnet" {
   name       = "db_subnet"
   subnet_ids = [aws_subnet.subnet_private_a.id, aws_subnet.subnet_private_b.id]
@@ -248,42 +253,60 @@ resource "aws_db_subnet_group" "db_subnet" {
   }
 }
 resource "aws_db_instance" "db_wordpress" {
-  identifier             = "db-wordpress"
-  allocated_storage      = 20
-  max_allocated_storage  = 30
-  storage_type           = "gp2"
-  engine                 = "mysql"
-  engine_version         = "5.7"
-  instance_class         = "db.t2.micro"
-  vpc_security_group_ids = [aws_security_group.sg_db.id]
-  db_subnet_group_name   = aws_db_subnet_group.db_subnet.name
-  name                   = "wordpress"
-  username               = "wordpress"
-  password               = "wordpress"
-  parameter_group_name   = "default.mysql5.7"
-  skip_final_snapshot    = "true"
+  identifier              = "db-wordpress"
+  allocated_storage       = 20
+  max_allocated_storage   = 30
+  storage_type            = "gp2"
+  engine                  = "mysql"
+  engine_version          = "5.7"
+  instance_class          = "db.t2.micro"
+  vpc_security_group_ids  = [aws_security_group.sg_db.id]
+  db_subnet_group_name    = aws_db_subnet_group.db_subnet.name
+  name                    = var.dbname
+  username                = var.dbuser
+  password                = var.dbpassword
+  parameter_group_name    = "default.mysql5.7"
+  skip_final_snapshot     = "true"
+  backup_retention_period = "0" //!!!! not null if you  want to have a replica-host
   tags = {
     "environment" = var.environment_tag
   }
 }
-resource "aws_launch_configuration" "lc-wordpress" {
+
+/*
+resource "aws_db_instance" "db_wordpress_replica" {
+  identifier              = "db-wordpress-replica"
+  allocated_storage       = 20
+  max_allocated_storage   = 30
+  storage_type            = "gp2"
+  engine                  = "mysql"
+  engine_version          = "5.7"
+  instance_class          = "db.t2.micro"
+  skip_final_snapshot     = "true"
+  vpc_security_group_ids  = [aws_security_group.sg_db.id]
+  replicate_source_db = aws_db_instance.db_wordpress.identifier
+  tags = {
+    "environment" = var.environment_tag
+  }
+} */
+
+ resource "aws_launch_configuration" "lc-wordpress" {
   name_prefix     = "lc_wordpress"
   image_id        = var.instance_ami_gr
   instance_type   = "t2.micro"
   key_name        = "rgsx_key"
   security_groups = [aws_security_group.sg_inst_gr.id]
   user_data       = <<-EOF
-    #!/bin/bash
-    sudo umount -a
-    sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${aws_efs_file_system.efs-wordpress.dns_name}:/ /efs-wordpress
-  EOF
+  #!/bin/bash
+  sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${aws_efs_file_system.efs-wordpress.dns_name}:/ /efs
+ EOF
 }
 resource "aws_autoscaling_group" "as-wordpress" {
-  name                      = "as-wordpress"
+  name                      = "as-wordpress1"
   vpc_zone_identifier       = [aws_subnet.subnet_private_a.id, aws_subnet.subnet_private_b.id]
   launch_configuration      = aws_launch_configuration.lc-wordpress.name
   min_size                  = 1
-  max_size                  = 2
+  max_size                  = 3
   health_check_grace_period = 300
   health_check_type         = "EC2"
   force_delete              = true
@@ -294,13 +317,15 @@ resource "aws_autoscaling_group" "as-wordpress" {
   }
   depends_on = [
     aws_efs_mount_target.efs-mount_pra,
-    aws_efs_mount_target.efs-mount_prb
+    aws_efs_mount_target.efs-mount_prb,
+    aws_instance.instance_wordpress,
+    aws_db_instance.db_wordpress
   ]
 }
 resource "aws_alb" "alb-wordpress" {
-  name                = "alb-wordpress"
-  security_groups     = [aws_security_group.sg_alb.id]
-  subnets             = [aws_subnet.subnet_public_a.id, aws_subnet.subnet_public_b.id]
+  name            = "alb-wordpress"
+  security_groups = [aws_security_group.sg_alb.id]
+  subnets         = [aws_subnet.subnet_public_a.id, aws_subnet.subnet_public_b.id]
   tags = {
     Environment = var.environment_tag
   }
@@ -325,3 +350,28 @@ resource "aws_autoscaling_attachment" "attach-atg-albtg" {
   autoscaling_group_name = aws_autoscaling_group.as-wordpress.id
   alb_target_group_arn   = aws_alb_target_group.tg-alb.arn
 }
+
+/* data "aws_route53_zone" "selected" {
+  name         = "cicd.me.uk."
+  private_zone = false
+}
+
+resource "aws_route53_record" "cname_wordpress" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = "www"
+  type    = "CNAME"
+  ttl     = "60"
+  records = [aws_alb.alb-wordpress.dns_name]
+}
+
+resource "aws_route53_record" "alias_wordpress" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = "cicd.me.uk"
+  type    = "A"
+  alias {
+    name                   = aws_alb.alb-wordpress.dns_name
+    zone_id                = aws_alb.alb-wordpress.zone_id
+    evaluate_target_health = true
+  }
+}
+ */

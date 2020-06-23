@@ -34,7 +34,7 @@ variable "instance_ami_one" {
 
 variable "instance_ami_gr" {
   type    = string
-  default = "ami-0662b60d010487aaf"
+  default = "ami-0efb4be38cce7c374"
 }
 
 variable "instance_type" {
@@ -71,3 +71,16 @@ variable "environment_tag" {
   type    = string
   default = "wordpress"
 }
+
+variable "dbname" {
+  type = string
+}
+
+variable "dbuser" {
+  type = string
+}
+
+variable "dbpassword" {
+  type = string
+}
+
