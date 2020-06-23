@@ -6,9 +6,18 @@ variable "aws_secret_key" {
   type = string
 }
 
-variable "aws_key_name" {
+variable "username" {
+  type    = string
+  default = "ec2-user"
+}
+variable "ssh_key_name" {
   type    = string
   default = "rgsx_key"
+}
+
+variable "ssh_key_path" {
+  type    = string
+  default = "rgsx_key.pem"
 }
 
 variable "aws_region" {
@@ -29,7 +38,7 @@ variable "availability_zone_b" {
 #ubuntu 18.04
 variable "instance_ami_one" {
   type    = string
-  default = "ami-0e342d72b12109f91"
+  default = "ami-0a02ee601d742e89f"
 }
 
 variable "instance_ami_gr" {

@@ -1,0 +1,9 @@
+---
+- hosts: all
+  gather_facts: yes
+  tasks:
+
+  - name: debug
+    debug: 
+      var: hostvars[inventory_hostname]
+      verbosity: 4
