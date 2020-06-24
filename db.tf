@@ -1,4 +1,4 @@
-/* resource "aws_db_subnet_group" "db_subnet" {
+resource "aws_db_subnet_group" "db_subnet" {
   name       = "db_subnet"
   subnet_ids = [aws_subnet.subnet_private_a.id, aws_subnet.subnet_private_b.id]
 
@@ -25,7 +25,7 @@ resource "aws_db_instance" "db_wordpress" {
   tags = {
     "environment" = var.environment_tag
   }
-} */
+}
 
 /*
 resource "aws_db_instance" "db_wordpress_replica" {

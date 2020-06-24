@@ -15,6 +15,11 @@ variable "ssh_key_name" {
   default = "rgsx_key"
 }
 
+variable "host_label" {
+  type    = string
+  default = "instance"
+}
+
 variable "ssh_key_path" {
   type    = string
   default = "rgsx_key.pem"

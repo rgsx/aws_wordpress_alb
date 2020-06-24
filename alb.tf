@@ -1,14 +1,11 @@
-/* resource "aws_launch_configuration" "lc-wordpress" {
+resource "aws_launch_configuration" "lc-wordpress" {
   name_prefix     = "lc_wordpress"
-  image_id        = var.instance_ami_gr
+  image_id        = aws_ami_from_instance.ami_wordpress.id
   instance_type   = "t2.micro"
   key_name        = "rgsx_key"
   security_groups = [aws_security_group.sg_inst_gr.id]
-  user_data       = <<-EOF
-  #!/bin/bash
-  sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${aws_efs_file_system.efs-wordpress.dns_name}:/ /efs
- EOF
 }
+
 resource "aws_autoscaling_group" "as-wordpress" {
   name                      = "as-wordpress1"
   vpc_zone_identifier       = [aws_subnet.subnet_private_a.id, aws_subnet.subnet_private_b.id]
@@ -57,4 +54,4 @@ resource "aws_alb_listener" "alb-listener" {
 resource "aws_autoscaling_attachment" "attach-atg-albtg" {
   autoscaling_group_name = aws_autoscaling_group.as-wordpress.id
   alb_target_group_arn   = aws_alb_target_group.tg-alb.arn
-} */
+}

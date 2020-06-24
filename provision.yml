@@ -1,9 +1,112 @@
 ---
 - hosts: all
   gather_facts: yes
-  tasks:
+  become: yes
+  
+  vars:
 
-  - name: debug
-    debug: 
-      var: hostvars[inventory_hostname]
-      verbosity: 4
+    efs_file_system_name: ""
+    efs_mount_dir: /efs
+    wordpress_dir: /efs/wordpress
+    mysql_db: ""
+    mysql_user: ""
+    mysql_password: ""
+    mysql_host: ""
+
+  tasks:
+  
+  - name: Amazon Linux Extras
+    shell: |
+      set -ex;
+      if amazon-linux-extras | grep "{{ item }}.*available"; 
+      then
+        amazon-linux-extras enable {{ item }};
+        echo RESULT:CHANGED;
+      else
+        echo RESULT:OK
+      fi
+    register: result
+    changed_when: "'RESULT:CHANGED' in result.stdout"
+    failed_when: result.rc > 0
+    with_items:
+    - epel
+    - nginx1
+    - php7.4
+
+  - name: yum install 
+    package:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    become: yes
+    with_items:
+      - nginx
+      - php-cli
+      - php-fpm
+      - php-mysqlnd
+      - php-gd
+      - nfs-utils
+      - amazon-efs-utils
+  
+  - name: copy php-fpm conf
+    copy:
+      src: files/www.conf
+      dest: /etc/php-fpm.d/www.conf
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: copy nginx conf
+    copy:
+      src: files/nginx.conf
+      dest: /etc/nginx/nginx.conf
+      owner: root
+      group: root
+      mode: '0644'
+  
+  - name: Create document root
+    file:
+      path:  "{{ efs_mount_dir }}"
+      state: directory
+
+  - name: Ensure EFS volume is mounted.
+    mount:
+      name: "{{ efs_mount_dir }}"
+      src: "{{ efs_file_system_name }}:/"
+      fstype: nfs4
+      opts: nfsvers=4.1
+      state: mounted  
+     
+  - name: Download and unpack latest WordPress
+    unarchive:
+      src: https://wordpress.org/latest.tar.gz
+      dest: "{{ efs_mount_dir }}"
+      remote_src: yes
+
+  - name: Set up wp-config
+    template:
+      src: "files/wp-config.php.j2"
+      dest: "{{ wordpress_dir }}/wp-config.php"
+
+  - name: Set ownership
+    file:
+      path: "{{ efs_mount_dir }}"
+      state: directory
+      recurse: yes
+      owner: nginx
+      group: nginx
+
+  - name: Set permissions for directories
+    shell: "/usr/bin/find {{ wordpress_dir }} -type d -exec chmod 750 {} \\;"
+
+  - name: Set permissions for files
+    shell: "/usr/bin/find {{ wordpress_dir }} -type f -exec chmod 640 {} \\;"
+
+  - name: reload service php-fpm nginx, if not started
+    service:
+      name: "{{ item }}"
+      state: reloaded
+      enabled: yes
+    with_items:
+      - nginx
+      - php-fpm
