@@ -4,6 +4,16 @@ provider "aws" {
   region     = var.aws_region
 }
 
+terraform {
+  backend "remote" {
+    hostname = "app.terraform.io"
+    organization = "cicd-me-uk"
+    workspaces {
+      name = "aws_wordpress_alb"
+    }
+  }
+}
+
 resource "aws_efs_file_system" "efs-wordpress" {
   creation_token   = "efs-wordpress"
   performance_mode = "generalPurpose"
