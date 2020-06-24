@@ -1,3 +1,29 @@
+provider "aws" {
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+  region     = var.aws_region
+}
+
+resource "aws_efs_file_system" "efs-wordpress" {
+  creation_token   = "efs-wordpress"
+  performance_mode = "generalPurpose"
+  throughput_mode  = "bursting"
+  encrypted        = "false"
+  tags = {
+    "environment" = var.environment_tag
+  }
+}
+resource "aws_efs_mount_target" "efs-mount_pra" {
+  file_system_id  = aws_efs_file_system.efs-wordpress.id
+  subnet_id       = aws_subnet.subnet_private_a.id
+  security_groups = [aws_security_group.sg_efs.id]
+}
+resource "aws_efs_mount_target" "efs-mount_prb" {
+  file_system_id  = aws_efs_file_system.efs-wordpress.id
+  subnet_id       = aws_subnet.subnet_private_b.id
+  security_groups = [aws_security_group.sg_efs.id]
+}
+
 resource "aws_instance" "instance_wordpress" {
   ami                    = var.instance_ami_one
   instance_type          = var.instance_type
@@ -6,15 +32,15 @@ resource "aws_instance" "instance_wordpress" {
   vpc_security_group_ids = [aws_security_group.sg_inst.id]
 
   provisioner "remote-exec" {
-    inline = [
-      "echo 1"
-    ]
-    connection {
-      type        = "ssh"
-      user        = var.username
-      private_key = file(var.ssh_key_path)
-      host        = self.public_ip
-    }
+      inline = [
+       "echo 1"
+      ]
+      connection {
+        type = "ssh"
+        user = var.username
+        private_key = file(var.ssh_key_path)
+        host = self.public_ip
+      }
   }
 
   provisioner "local-exec" {
@@ -31,10 +57,9 @@ resource "aws_instance" "instance_wordpress" {
                                 -e mysql_user=${var.dbuser} \
                                 -e mysql_password=${var.dbpassword} \
                                 -e mysql_host=${aws_db_instance.db_wordpress.address} \
-      provision.yml      
-   EOT 
+      provision.yml
+   EOT
   }
-
   depends_on = [
     aws_efs_mount_target.efs-mount_pra,
     aws_db_instance.db_wordpress
