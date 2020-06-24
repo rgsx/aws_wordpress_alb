@@ -6,7 +6,7 @@ provider "aws" {
 
 terraform {
   backend "remote" {
-    hostname = "app.terraform.io"
+    hostname     = "app.terraform.io"
     organization = "cicd-me-uk"
     workspaces {
       name = "aws_wordpress_alb"
@@ -42,15 +42,15 @@ resource "aws_instance" "instance_wordpress" {
   vpc_security_group_ids = [aws_security_group.sg_inst.id]
 
   provisioner "remote-exec" {
-      inline = [
-       "echo 1"
-      ]
-      connection {
-        type = "ssh"
-        user = var.username
-        private_key = file(var.ssh_key_path)
-        host = self.public_ip
-      }
+    inline = [
+      "echo 1"
+    ]
+    connection {
+      type        = "ssh"
+      user        = var.username
+      private_key = file(var.ssh_key_path)
+      host        = self.public_ip
+    }
   }
 
   provisioner "local-exec" {
