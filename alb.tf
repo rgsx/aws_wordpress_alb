@@ -40,6 +40,16 @@ resource "aws_alb_target_group" "tg-alb" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.vpc.id
+  health_check {
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+    timeout             = 10
+    port                = 80
+    path                = "/wp-login.php"
+    protocol            = "HTTP"
+    interval            = 30
+    matcher             = "200"
+  }
 }
 resource "aws_alb_listener" "alb-listener" {
   load_balancer_arn = aws_alb.alb-wordpress.arn
