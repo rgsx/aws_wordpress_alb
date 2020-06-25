@@ -13,9 +13,7 @@ resource "aws_security_group" "sg_db" {
     to_port   = 0
     protocol  = "-1"
   }
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_security_group" "sg_efs" {
   name   = "sg_efs"
@@ -31,9 +29,7 @@ resource "aws_security_group" "sg_efs" {
     to_port   = 0
     protocol  = "-1"
   }
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_security_group" "sg_inst" {
   name   = "sg_inst"
@@ -62,9 +58,7 @@ resource "aws_security_group" "sg_inst" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_security_group" "sg_inst_gr" {
   name   = "sg_inst_gr"
@@ -87,9 +81,7 @@ resource "aws_security_group" "sg_inst_gr" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_security_group" "sg_alb" {
   name   = "sg_alb"
@@ -106,7 +98,5 @@ resource "aws_security_group" "sg_alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }

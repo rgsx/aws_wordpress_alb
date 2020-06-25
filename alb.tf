@@ -15,11 +15,12 @@ resource "aws_autoscaling_group" "as-wordpress" {
   health_check_grace_period = 300
   health_check_type         = "ELB"
   force_delete              = true
-  tag {
-    key                 = "environment"
+   tag {
+    key                 = "Project"
     value               = var.environment_tag
     propagate_at_launch = true
-  }
+  } 
+  
   depends_on = [
     aws_efs_mount_target.efs-mount_pra,
     aws_efs_mount_target.efs-mount_prb,
@@ -31,9 +32,7 @@ resource "aws_alb" "alb-wordpress" {
   name            = "alb-wordpress"
   security_groups = [aws_security_group.sg_alb.id]
   subnets         = [aws_subnet.subnet_public_a.id, aws_subnet.subnet_public_b.id]
-  tags = {
-    Environment = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_alb_target_group" "tg-alb" {
   name     = "tg-alb"
@@ -50,12 +49,12 @@ resource "aws_alb_target_group" "tg-alb" {
     interval            = 30
     matcher             = "200"
   }
+  tags = var.default_tags
 }
 resource "aws_alb_listener" "alb-listener" {
   load_balancer_arn = aws_alb.alb-wordpress.arn
   port              = "80"
   protocol          = "HTTP"
-
   default_action {
     target_group_arn = aws_alb_target_group.tg-alb.arn
     type             = "forward"
@@ -96,8 +95,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu-alarm" {
   }
   actions_enabled = true
   alarm_actions   = [aws_autoscaling_policy.cpu-policy-scaleup.arn]
+  tags = var.default_tags
 }
-
 resource "aws_cloudwatch_metric_alarm" "cpu-alarm-scaledown" {
   alarm_name          = "cpu-alarm-scaledown"
   alarm_description   = "cpu-alarm-scaledown"
@@ -113,4 +112,5 @@ resource "aws_cloudwatch_metric_alarm" "cpu-alarm-scaledown" {
   }
   actions_enabled = true
   alarm_actions   = [aws_autoscaling_policy.cpu-policy-scaledown.arn]
+  tags = var.default_tags
 }

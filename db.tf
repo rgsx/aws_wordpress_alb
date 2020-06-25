@@ -22,9 +22,7 @@ resource "aws_db_instance" "db_wordpress" {
   parameter_group_name    = "default.mysql5.7"
   skip_final_snapshot     = "true"
   backup_retention_period = "0" //!!!! not null if you  want to have a replica-host
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 
 /*
@@ -39,7 +37,5 @@ resource "aws_db_instance" "db_wordpress_replica" {
   skip_final_snapshot     = "true"
   vpc_security_group_ids  = [aws_security_group.sg_db.id]
   replicate_source_db = aws_db_instance.db_wordpress.identifier
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 } */

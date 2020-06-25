@@ -19,9 +19,7 @@ resource "aws_efs_file_system" "efs-wordpress" {
   performance_mode = "generalPurpose"
   throughput_mode  = "bursting"
   encrypted        = "false"
-  tags = {
-    "environment" = var.environment_tag
-  }
+  tags = var.default_tags
 }
 resource "aws_efs_mount_target" "efs-mount_pra" {
   file_system_id  = aws_efs_file_system.efs-wordpress.id
@@ -70,6 +68,7 @@ resource "aws_instance" "instance_wordpress" {
       provision.yml
    EOT
   }
+  tags = var.default_tags
   depends_on = [
     aws_efs_mount_target.efs-mount_pra,
     aws_db_instance.db_wordpress
@@ -79,4 +78,5 @@ resource "aws_instance" "instance_wordpress" {
 resource "aws_ami_from_instance" "ami_wordpress" {
   name               = "ami_alb"
   source_instance_id = aws_instance.instance_wordpress.id
+  tags = var.default_tags
 }

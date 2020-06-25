@@ -98,3 +98,11 @@ variable "dbpassword" {
   type = string
 }
 
+variable "default_tags" {
+ description = "The set of tags."
+ type = map
+ default = {
+             "Environment" = "dev",
+             "Project" = "wordpress",
+           }
+}
