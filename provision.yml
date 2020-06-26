@@ -45,6 +45,9 @@
       - php-fpm
       - php-mysqlnd
       - php-gd
+      - php-opcache
+      - php-memcache
+      - php-memcached
       - nfs-utils
       - amazon-efs-utils
   
