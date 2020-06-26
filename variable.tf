@@ -106,3 +106,8 @@ variable "default_tags" {
              "Project" = "wordpress",
            }
 }
+
+variable "acm-certificate-arn" {
+  type = string
+  default = "arn:aws:acm:us-east-1:361838629300:certificate/a6b9b701-add8-4ca4-a752-b2254fa2a285"
+}

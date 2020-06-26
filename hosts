@@ -3,4 +3,4 @@ ansible_ssh_user=ec2-user
 ansible_ssh_private_key_file=rgsx_key.pem
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 [instance]
-3.125.47.202
+18.185.28.11
